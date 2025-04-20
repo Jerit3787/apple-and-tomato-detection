@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Species Classifier</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        
+        .container {
+            margin-top: 50px;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #343a40;
+        }
+        
+        .btn-upload {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            margin-top: 20px;
+        }
+        
+        .btn-upload input[type="file"] {
+            font-size: 20px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            height: 100%;
+            width: 100%;
+        }
+        
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+        
+        #imagePreview {
+            margin-top: 20px;
+            max-width: 100%;
+            max-height: 300px;
+            display: none;
+            /* Hide initially */
+            border: 1px solid #ddd;
+            /* Optional: Add a border */
+            border-radius: 5px;
+            /* Optional: Add rounded corners */
+        }
+        
+        .image-container {
+            display: flex;
+            justify-content: center;
+            /* Center horizontally */
+            align-items: center;
+            /* Center vertically */
+            margin-top: 20px;
+        }
+        
+        .placeholder {
+            width: 100%;
+            max-height: 300px;
+            border: 1px solid #ddd;
+            /* Optional: Add a border */
+            border-radius: 5px;
+            /* Optional: Add rounded corners */
+            background-color: #e0e0e0;
+            /* Gray background color */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #aaa;
+            /* Placeholder text color */
+            font-size: 20px;
+            /* Placeholder text size */
+            text-align: center;
+            /* Center text */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="text-center">Upload an Image to Classify Snake Species</h1>
+
+        <!-- Image Preview -->
+        <div class="image-container">
+            <div id="imagePreview" class="placeholder" style="display: {{ 'none' if image_url else 'block' }};">
+                No image uploaded
+            </div>
+            <img id="uploadedImage" src="{{ image_url }}" alt="Image Preview" class="img-fluid" style="display: {{ 'block' if image_url else 'none' }};">
+        </div>
+
+        <form action="/predict" method="post" enctype="multipart/form-data" class="text-center" id="uploadForm">
+            <div class="form-group">
+                <div class="btn-upload">
+                    <button type="button" class="btn btn-primary">Choose File</button>
+                    <input type="file" name="file" accept="image/*" required id="fileInput">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Upload</button>
+        </form>
+
+        <div id="result" class="mt-4 text-center">
+            {% if prediction %}
+            <h3>The predicted species is: {{ prediction }} {{ number }}</h3>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>.
+    <script>
+        // JavaScript to preview the uploaded image
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imagePreview = document.getElementById('uploadedImage');
+                    const placeholder = document.getElementById('imagePreview');
+                    imagePreview.src = e.target.result; // Set the image source to the uploaded file
+                    imagePreview.style.display = 'block'; // Show the uploaded image
+                    placeholder.style.display = 'none'; // Hide the placeholder
+                }
+                reader.readAsDataURL(file); // Read the file as a data URL
+            }
+        });
+    </script>
+</body>
+
+</html>
