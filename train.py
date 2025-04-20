@@ -67,7 +67,7 @@ history = model.fit(
     steps_per_epoch=train_generator.samples // train_generator.batch_size,
     validation_data=val_generator,
     validation_steps=val_generator.samples // val_generator.batch_size,
-    epochs=20 # Adjust the number of epochs as needed
+    epochs=10 # Adjust the number of epochs as needed
 )
 
 # Evaluate the model on test data

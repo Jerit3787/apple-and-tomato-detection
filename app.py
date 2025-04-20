@@ -11,7 +11,9 @@ app = Flask(__name__)
 model = load_model('output/model.keras')
 
 # Define the classes (update this list based on your model's classes)
-class_names = ['Nerodia sipedon - Northern Watersnake', 'Thamnophis sirtalis - Common Garter snake', "Storeria dekayi - DeKay's Brown snake", "Patherophis obsoletus - Black Rat snake", "Crotalus atrox - Western Diamondback rattlesnake"]  # Add your actual class names
+class_names = ["Apple", "Apple", "Apple", "Apple", "Tomato", "Tomato", "Tomato", "Tomato", "Tomato", "Tomato", "Apple", "Apple", "Apple", "Apple", "Apple", "Apple", "Apple", "Apple"]  # Add your actual class names
+
+print(class_names)
 
 # Define the upload folder
 UPLOAD_FOLDER = 'uploads/'
