@@ -46,6 +46,9 @@ print("Final class names for display (preserving indices):", class_names)
 UPLOAD_FOLDER = 'uploads/'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# Define the image size
+IMG_SIZE = 128  # Must match what was used during training
+
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -65,7 +68,7 @@ def predict():
     file.save(file_path)
 
     # Load and preprocess the image
-    img = image.load_img(file_path, target_size=(224, 224))
+    img = image.load_img(file_path, target_size=(IMG_SIZE, IMG_SIZE))
     img_array = image.img_to_array(img) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
@@ -107,7 +110,7 @@ def predict_api():
     file.save(file_path)
 
     # Load and preprocess the image
-    img = image.load_img(file_path, target_size=(224, 224))
+    img = image.load_img(file_path, target_size=(IMG_SIZE, IMG_SIZE))
     img_array = image.img_to_array(img) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 

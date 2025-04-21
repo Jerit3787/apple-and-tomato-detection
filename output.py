@@ -1,7 +1,8 @@
+import os
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import json
 
-train_dir = "working/train"
+train_dir = "working/Training"
 
 # Create a data generator
 train_datagen = ImageDataGenerator(rescale=1.0/255.0)
@@ -16,6 +17,9 @@ train_generator = train_datagen.flow_from_directory(
 
 # Get the class indices
 class_indices = train_generator.class_indices
+
+# Create the output directory if it doesn't exist
+os.makedirs("output", exist_ok=True)
 
 # Save the class indices to a JSON file
 with open("output/class_indices.json", "w") as json_file:
