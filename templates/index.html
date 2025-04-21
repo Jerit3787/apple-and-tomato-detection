@@ -4,146 +4,224 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snake Species Classifier</title>
+    <title>Fruit Identifier - Apple or Tomato?</title>
     <!-- Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
             background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         .container {
             margin-top: 50px;
-            padding: 20px;
-            border-radius: 10px;
+            padding: 30px;
+            border-radius: 15px;
             background-color: white;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
         }
         
         h1 {
-            color: #343a40;
+            color: #28a745;
+            margin-bottom: 25px;
+            font-weight: 600;
         }
         
-        .btn-upload {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-            margin-top: 20px;
-        }
-        
-        .btn-upload input[type="file"] {
-            font-size: 20px;
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
+        .drop-area {
+            border: 3px dashed #ced4da;
+            border-radius: 15px;
+            padding: 50px 20px;
+            text-align: center;
             cursor: pointer;
-            height: 100%;
-            width: 100%;
+            transition: all 0.3s ease;
+            margin-bottom: 25px;
+            background-color: #f8f9fa;
+        }
+        
+        .drop-area:hover,
+        .drop-area.dragover {
+            border-color: #28a745;
+            background-color: #f0fff4;
+        }
+        
+        .drop-area p {
+            color: #6c757d;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        
+        .drop-area i {
+            font-size: 48px;
+            color: #28a745;
+            margin-bottom: 15px;
+        }
+        
+        #uploadedImage {
+            max-height: 300px;
+            border-radius: 10px;
+            margin: 20px auto;
+            display: block;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
         
         .btn-primary {
-            background-color: #007bff;
-            border-color: #007bff;
+            background-color: #28a745;
+            border-color: #28a745;
+            padding: 10px 25px;
+            font-weight: 500;
+            border-radius: 30px;
         }
         
         .btn-primary:hover {
-            background-color: #0056b3;
-            border-color: #0056b3;
+            background-color: #218838;
+            border-color: #218838;
         }
         
-        #imagePreview {
-            margin-top: 20px;
-            max-width: 100%;
-            max-height: 300px;
-            display: none;
-            /* Hide initially */
-            border: 1px solid #ddd;
-            /* Optional: Add a border */
-            border-radius: 5px;
-            /* Optional: Add rounded corners */
-        }
-        
-        .image-container {
-            display: flex;
-            justify-content: center;
-            /* Center horizontally */
-            align-items: center;
-            /* Center vertically */
-            margin-top: 20px;
-        }
-        
-        .placeholder {
-            width: 100%;
-            max-height: 300px;
-            border: 1px solid #ddd;
-            /* Optional: Add a border */
-            border-radius: 5px;
-            /* Optional: Add rounded corners */
-            background-color: #e0e0e0;
-            /* Gray background color */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #aaa;
-            /* Placeholder text color */
-            font-size: 20px;
-            /* Placeholder text size */
+        .result-card {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
             text-align: center;
-            /* Center text */
+            border-left: 5px solid #28a745;
+        }
+        
+        .result-card h3 {
+            color: #343a40;
+            font-weight: 600;
+        }
+        
+        .apple-color {
+            color: #dc3545;
+        }
+        
+        .tomato-color {
+            color: #dc3545;
+        }
+        
+        .hidden {
+            display: none;
         }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
 
 <body>
     <div class="container">
-        <h1 class="text-center">Upload an Image to Classify Snake Species</h1>
+        <h1 class="text-center">Apple or Tomato Identifier</h1>
 
-        <!-- Image Preview -->
-        <div class="image-container">
-            <div id="imagePreview" class="placeholder" style="display: {{ 'none' if image_url else 'block' }};">
-                No image uploaded
-            </div>
-            <img id="uploadedImage" src="{{ image_url }}" alt="Image Preview" class="img-fluid" style="display: {{ 'block' if image_url else 'none' }};">
+        <div class="drop-area" id="dropArea">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p>Drag & drop your image here</p>
+            <p>or</p>
+            <button type="button" class="btn btn-primary" id="browseBtn">Browse Files</button>
         </div>
 
-        <form action="/predict" method="post" enctype="multipart/form-data" class="text-center" id="uploadForm">
-            <div class="form-group">
-                <div class="btn-upload">
-                    <button type="button" class="btn btn-primary">Choose File</button>
-                    <input type="file" name="file" accept="image/*" required id="fileInput">
-                </div>
-            </div>
-            <button type="submit" class="btn btn-primary">Upload</button>
+        <img id="uploadedImage" class="hidden" alt="Uploaded Image">
+
+        <form action="/predict" method="post" enctype="multipart/form-data" id="uploadForm" class="text-center">
+            <input type="file" name="file" accept="image/*" required id="fileInput" class="hidden">
+            <button type="submit" class="btn btn-primary" id="identifyBtn" disabled>Identify Fruit</button>
         </form>
 
-        <div id="result" class="mt-4 text-center">
-            {% if prediction %}
-            <h3>The predicted species is: {{ prediction }} {{ number }}</h3>
+        <div class="text-center mt-4">
+            <a href="/camera" class="btn btn-outline-primary">
+                <i class="fas fa-camera"></i> Try Real-time Detection
+            </a>
+        </div>
+
+        {% if prediction %}
+        <div class="result-card">
+            <h3>This looks like a {% if prediction == 'apple' %}
+                <span class="apple-color">{{ prediction }}</span> {% elif prediction == 'tomato' %}
+                <span class="tomato-color">{{ prediction }}</span> {% else %} {{ prediction }} {% endif %}
+            </h3>
+            {% if confidence %}
+            <p class="prediction-confidence">Confidence: {{ confidence }}</p>
             {% endif %}
         </div>
+        {% endif %}
     </div>
 
     <!-- Bootstrap JS and dependencies -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>.
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        // JavaScript to preview the uploaded image
-        document.getElementById('fileInput').addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const imagePreview = document.getElementById('uploadedImage');
-                    const placeholder = document.getElementById('imagePreview');
-                    imagePreview.src = e.target.result; // Set the image source to the uploaded file
-                    imagePreview.style.display = 'block'; // Show the uploaded image
-                    placeholder.style.display = 'none'; // Hide the placeholder
-                }
-                reader.readAsDataURL(file); // Read the file as a data URL
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadedImage = document.getElementById('uploadedImage');
+        const identifyBtn = document.getElementById('identifyBtn');
+        const browseBtn = document.getElementById('browseBtn');
+
+        // Handle browse button click
+        browseBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Prevent default behaviors for drag events
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Highlight drop area when dragging over it
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            dropArea.classList.add('dragover');
+        }
+
+        function unhighlight() {
+            dropArea.classList.remove('dragover');
+        }
+
+        // Handle dropped files
+        dropArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+
+            if (files.length) {
+                fileInput.files = files;
+                handleFiles(files);
+            }
+        }
+
+        // Handle file input change
+        fileInput.addEventListener('change', function() {
+            if (this.files.length) {
+                handleFiles(this.files);
             }
         });
+
+        function handleFiles(files) {
+            const file = files[0];
+
+            if (file && file.type.match('image.*')) {
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    uploadedImage.src = e.target.result;
+                    uploadedImage.classList.remove('hidden');
+                    identifyBtn.disabled = false;
+                }
+
+                reader.readAsDataURL(file);
+            }
+        }
     </script>
 </body>
 

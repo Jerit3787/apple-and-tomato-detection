@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Apple or Tomato Detector</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .container {
+            margin-top: 50px;
+            padding: 30px;
+            border-radius: 15px;
+            background-color: white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+        }
+        
+        h1 {
+            color: #28a745;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        #video {
+            width: 100%;
+            border-radius: 15px;
+            display: block;
+        }
+        
+        #canvas {
+            display: none;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            gap: 15px;
+        }
+        
+        .btn-primary {
+            background-color: #28a745;
+            border-color: #28a745;
+            padding: 10px 25px;
+            font-weight: 500;
+            border-radius: 30px;
+        }
+        
+        .btn-primary:hover {
+            background-color: #218838;
+            border-color: #218838;
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+            padding: 10px 25px;
+            font-weight: 500;
+            border-radius: 30px;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+        }
+        
+        .result-card {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: center;
+            border-left: 5px solid #28a745;
+            transition: all 0.3s ease;
+        }
+        
+        .result-card h3 {
+            color: #343a40;
+            font-weight: 600;
+        }
+        
+        .apple-result {
+            border-left-color: #dc3545;
+        }
+        
+        .tomato-result {
+            border-left-color: #ff6347;
+        }
+        
+        .apple-color {
+            color: #dc3545;
+        }
+        
+        .tomato-color {
+            color: #ff6347;
+        }
+        
+        .prediction-confidence {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        .camera-selector {
+            margin-bottom: 20px;
+        }
+        
+        .detection-frequency {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .detection-frequency label {
+            margin-right: 10px;
+            margin-bottom: 0;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="text-center">Real-time Apple or Tomato Detector</h1>
+
+        <div class="camera-selector text-center">
+            <label for="cameraSelect">Select Camera:</label>
+            <select id="cameraSelect" class="form-control form-control-sm d-inline-block" style="width: auto;">
+                <option value="">Loading cameras...</option>
+            </select>
+        </div>
+
+        <div class="camera-container">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <div class="detection-frequency">
+            <label for="detectionInterval">Detection Frequency:</label>
+            <select id="detectionInterval" class="form-control form-control-sm" style="width: auto;">
+                <option value="500">Very Fast (0.5s)</option>
+                <option value="1000" selected>Fast (1s)</option>
+                <option value="2000">Normal (2s)</option>
+                <option value="3000">Slow (3s)</option>
+            </select>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn" class="btn btn-primary">
+                <i class="fas fa-play"></i> Start Camera
+            </button>
+            <button id="stopBtn" class="btn btn-danger" disabled>
+                <i class="fas fa-stop"></i> Stop Camera
+            </button>
+        </div>
+
+        <div id="resultCard" class="result-card" style="display: none;">
+            <h3>Detected: <span id="prediction"></span></h3>
+            <p class="prediction-confidence">Confidence: <span id="confidence"></span>%</p>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="/" class="btn btn-outline-secondary">
+                <i class="fas fa-upload"></i> Switch to Upload Mode
+            </a>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const resultCard = document.getElementById('resultCard');
+        const predictionSpan = document.getElementById('prediction');
+        const confidenceSpan = document.getElementById('confidence');
+        const cameraSelect = document.getElementById('cameraSelect');
+        const detectionIntervalSelect = document.getElementById('detectionInterval');
+
+        let stream = null;
+        let isRunning = false;
+        let detectionTimer = null;
+        let selectedDeviceId = '';
+
+        // Get available cameras
+        async function getCameras() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+                cameraSelect.innerHTML = '';
+
+                if (videoDevices.length === 0) {
+                    cameraSelect.innerHTML = '<option value="">No cameras found</option>';
+                    return;
+                }
+
+                videoDevices.forEach(device => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.text = device.label || `Camera ${cameraSelect.length + 1}`;
+                    cameraSelect.appendChild(option);
+                });
+
+                // Select the first camera by default
+                selectedDeviceId = videoDevices[0].deviceId;
+            } catch (error) {
+                console.error('Error getting cameras:', error);
+                cameraSelect.innerHTML = '<option value="">Error loading cameras</option>';
+            }
+        }
+
+        // Initialize camera access
+        async function initCamera() {
+            try {
+                if (stream) {
+                    stopCamera();
+                }
+
+                const constraints = {
+                    video: {
+                        deviceId: selectedDeviceId ? {
+                            exact: selectedDeviceId
+                        } : undefined,
+                        width: {
+                            ideal: 640
+                        },
+                        height: {
+                            ideal: 480
+                        },
+                        facingMode: 'environment' // Prefer rear camera on mobile
+                    }
+                };
+
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+
+                // Set canvas dimensions once video metadata is loaded
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                };
+
+                isRunning = true;
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+
+                // Start detection loop
+                startDetection();
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                alert('Failed to access camera. Please make sure you have given camera permissions and try again.');
+            }
+        }
+
+        // Stop camera
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                stream = null;
+            }
+
+            isRunning = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+
+            // Stop detection loop
+            if (detectionTimer) {
+                clearTimeout(detectionTimer);
+                detectionTimer = null;
+            }
+
+            // Hide result
+            resultCard.style.display = 'none';
+        }
+
+        // Capture frame and send for detection
+        function captureFrame() {
+            if (!isRunning) return;
+
+            // Draw current video frame to canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Get image data as base64
+            canvas.toBlob(blob => {
+                const formData = new FormData();
+                formData.append('file', blob, 'capture.jpg');
+
+                // Send to server
+                fetch('/predict_api', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        displayResult(data);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }, 'image/jpeg');
+        }
+
+        // Display detection result
+        function displayResult(data) {
+            resultCard.style.display = 'block';
+
+            if (data.prediction === 'apple') {
+                predictionSpan.className = 'apple-color';
+                resultCard.className = 'result-card apple-result';
+            } else if (data.prediction === 'tomato') {
+                predictionSpan.className = 'tomato-color';
+                resultCard.className = 'result-card tomato-result';
+            } else {
+                predictionSpan.className = '';
+                resultCard.className = 'result-card';
+            }
+
+            predictionSpan.textContent = data.prediction;
+
+            // Display confidence if available
+            if (data.confidence) {
+                confidenceSpan.textContent = (data.confidence * 100).toFixed(2);
+                document.querySelector('.prediction-confidence').style.display = 'block';
+            } else {
+                document.querySelector('.prediction-confidence').style.display = 'none';
+            }
+        }
+
+        // Start detection loop
+        function startDetection() {
+            const interval = parseInt(detectionIntervalSelect.value);
+
+            captureFrame();
+
+            detectionTimer = setTimeout(startDetection, interval);
+        }
+
+        // Event listeners
+        startBtn.addEventListener('click', initCamera);
+        stopBtn.addEventListener('click', stopCamera);
+
+        cameraSelect.addEventListener('change', function() {
+            selectedDeviceId = this.value;
+            if (isRunning) {
+                stopCamera();
+                initCamera();
+            }
+        });
+
+        detectionIntervalSelect.addEventListener('change', function() {
+            if (isRunning) {
+                // Restart detection with new interval
+                if (detectionTimer) {
+                    clearTimeout(detectionTimer);
+                }
+                startDetection();
+            }
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if browser supports mediaDevices
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Your browser does not support accessing the camera. Please try with a different browser.');
+                startBtn.disabled = true;
+                return;
+            }
+
+            // Get available cameras
+            getCameras();
+        });
+    </script>
+</body>
+
+</html>
