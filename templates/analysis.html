@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detailed Analysis - Fruit Identifier</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .container {
+            margin-top: 50px;
+            padding: 30px;
+            border-radius: 15px;
+            background-color: white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            max-width: 1000px;
+            margin-bottom: 50px;
+        }
+        
+        h1 {
+            color: #28a745;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        
+        .feature-buttons {
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .analysis-image {
+            max-height: 300px;
+            border-radius: 10px;
+            margin: 0 auto 30px;
+            display: block;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .result-card {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 5px solid #28a745;
+        }
+        
+        .confidence-meter {
+            height: 20px;
+            border-radius: 5px;
+            background-color: #e9ecef;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .confidence-level {
+            height: 100%;
+            background-color: #28a745;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+        }
+        
+        .apple-color {
+            color: #dc3545;
+        }
+        
+        .tomato-color {
+            color: #dc3545;
+        }
+        
+        .other-predictions {
+            margin-top: 30px;
+        }
+        
+        .prediction-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        
+        .prediction-bar-container {
+            height: 30px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .prediction-bar {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            color: white;
+            font-weight: bold;
+            background-color: #17a2b8;
+        }
+        
+        .apple-bar {
+            background-color: #dc3545;
+        }
+        
+        .tomato-bar {
+            background-color: #dc3545;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="text-center">Detailed Analysis</h1>
+
+        <div class="feature-buttons">
+            <a href="/" class="btn btn-outline-success"><i class="fas fa-home"></i> Home</a>
+            <a href="/history" class="btn btn-outline-info"><i class="fas fa-history"></i> History</a>
+            <a href="/camera" class="btn btn-outline-primary"><i class="fas fa-camera"></i> Camera Detection</a>
+            <a href="/batch" class="btn btn-outline-warning"><i class="fas fa-images"></i> Batch Process</a>
+            <a href="/compare" class="btn btn-outline-secondary"><i class="fas fa-exchange-alt"></i> Compare</a>
+            <a href="/stats" class="btn btn-outline-dark"><i class="fas fa-chart-pie"></i> Statistics</a>
+            <a href="/export/csv" class="btn btn-outline-danger"><i class="fas fa-file-export"></i> Export CSV</a>
+        </div>
+
+        {% if prediction %}
+        <div class="row">
+            <div class="col-md-6">
+                <img src="{{ image_path }}" class="analysis-image img-fluid" alt="Analyzed Image">
+                <div class="text-center mb-4">
+                    <p class="text-muted">Prediction made on {{ prediction.timestamp }}</p>
+                    <p class="text-muted">Filename: {{ prediction.filename }}</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="result-card">
+                    <h3 class="text-center">
+                        Primary Prediction: {% if prediction.prediction == 'apple' %}
+                        <span class="apple-color">{{ prediction.prediction }}</span> {% elif prediction.prediction == 'tomato' %}
+                        <span class="tomato-color">{{ prediction.prediction }}</span> {% else %} {{ prediction.prediction }} {% endif %}
+                    </h3>
+                    <h5 class="text-center text-muted">{{ prediction.original_class }}</h5>
+                    <p class="text-center mt-3">Confidence: {{ prediction.confidence_message }}</p>
+                    <div class="confidence-meter">
+                        <div class="confidence-level" style="width: {{ prediction.confidence_message }}">
+                            {{ prediction.confidence_message }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="other-predictions">
+                    <h4>All Predictions</h4>
+                    <p class="text-muted">These are all the potential classifications with their confidence levels:</p>
+
+                    {% for pred in all_predictions %}
+                    <div class="prediction-item">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>{{ pred.class_name }}</strong>
+                                <span class="text-muted">({{ pred.simple_class }})</span>
+                            </div>
+                            <div>{{ pred.confidence_percent }}</div>
+                        </div>
+                        <div class="prediction-bar-container">
+                            <div class="prediction-bar {% if pred.simple_class == 'apple' %}apple-bar{% elif pred.simple_class == 'tomato' %}tomato-bar{% endif %}" style="width: {{ pred.confidence_percent }}">
+                                {{ pred.confidence_percent }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="mt-4 text-center">
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#feedbackModal">
+                        <i class="fas fa-thumbs-up"></i> Provide Feedback
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center">
+            <i class="fas fa-exclamation-circle fa-3x text-warning mb-3"></i>
+            <h4>Prediction not found</h4>
+            <p class="text-muted">The requested prediction could not be found or has expired.</p>
+            <a href="/history" class="btn btn-primary mt-3">Return to History</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Feedback Modal -->
+    <div class="modal fade" id="feedbackModal" tabindex="-1" role="dialog" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="feedbackModalLabel">Provide Feedback</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="feedbackForm">
+                        <div class="form-group">
+                            <label>Was the prediction correct?</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="actual_class" id="classApple" value="apple">
+                                    <label class="form-check-label" for="classApple">Apple</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="actual_class" id="classTomato" value="tomato">
+                                    <label class="form-check-label" for="classTomato">Tomato</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="actual_class" id="classOther" value="other">
+                                    <label class="form-check-label" for="classOther">Other</label>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="predictionId" name="prediction_id" value="{{ prediction.id }}">
+                    </form>
+                    <div id="feedbackResponse" class="alert alert-success mt-3" style="display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="submitFeedback">Submit Feedback</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // Handle feedback submission
+        document.getElementById('submitFeedback').addEventListener('click', function() {
+            const form = document.getElementById('feedbackForm');
+            let selectedClass = null;
+            const selectedRadio = form.querySelector('input[name="actual_class"]:checked');
+            if (selectedRadio) {
+                selectedClass = selectedRadio.value;
+            }
+            const predictionId = document.getElementById('predictionId').value;
+
+            if (!selectedClass) {
+                alert('Please select a class');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('prediction_id', predictionId);
+            formData.append('actual_class', selectedClass);
+
+            fetch('/feedback', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    const responseDiv = document.getElementById('feedbackResponse');
+                    responseDiv.style.display = 'block';
+                    responseDiv.textContent = data.message;
+
+                    // Hide the form after successful submission
+                    document.getElementById('feedbackForm').style.display = 'none';
+
+                    // Hide submit button
+                    document.getElementById('submitFeedback').style.display = 'none';
+
+                    // Auto close after 3 seconds
+                    setTimeout(function() {
+                        $('#feedbackModal').modal('hide');
+                    }, 3000);
+                })
+                .catch(function(error) {
+                    console.error('Error:', error);
+                });
+        });
+    </script>
+</body>
+
+</html>
+`

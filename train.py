@@ -118,7 +118,18 @@ test_generator = test_datagen.flow_from_directory(
     shuffle=False
 )
 
-test_steps = min(30, test_generator.samples // BATCH_SIZE)
+# Print class distribution in test data to diagnose issues
+print("\nClass distribution in test data:")
+class_counts = {}
+for class_name, class_idx in test_generator.class_indices.items():
+    n_samples = len(test_generator.filenames)
+    count = sum(1 for i, filename in enumerate(test_generator.filenames) 
+               if os.path.dirname(filename) == class_name)
+    class_counts[class_name] = count
+    print(f"  {class_name}: {count} images")
+
+# Process more test batches to include all classes
+test_steps = min(50, test_generator.samples // BATCH_SIZE)
 test_loss, test_accuracy = model.evaluate(test_generator, steps=test_steps)
 print(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}")
 
@@ -177,6 +188,19 @@ plt.close()
 y_pred = []
 y_true = []
 
+# Define class_labels based on the class indices first
+class_labels = list(class_indices.keys())
+
+# Make sure we process more data to include all classes, especially tomatoes
+print("\nProcessing test data for classification report...")
+test_steps = min(100, test_generator.samples // BATCH_SIZE)  # Increase test steps
+
+# Check if we have all expected classes in our test data
+tomato_classes = [i for i, name in enumerate(class_labels) if 'tomato' in name.lower()]
+apple_classes = [i for i, name in enumerate(class_labels) if 'apple' in name.lower()]
+
+print(f"Looking for {len(tomato_classes)} tomato classes and {len(apple_classes)} apple classes in the test data")
+
 # Reset generator to start from the beginning
 test_generator.reset()
 for i in range(test_steps):
@@ -189,20 +213,48 @@ for i in range(test_steps):
         
         y_pred.extend(batch_pred_classes)
         y_true.extend(batch_true_classes)
+        
+        # Print progress periodically
+        if i % 10 == 0:
+            print(f"Processed {i}/{test_steps} test batches")
+            
     except StopIteration:
+        print(f"Reached end of test data after {i} batches")
         break
 
-# Generate classification report - fix the error with mismatched classes
+# Check if we have all expected classes
+tomato_classes = [i for i, name in enumerate(class_labels) if 'tomato' in name.lower()]
+apple_classes = [i for i, name in enumerate(class_labels) if 'apple' in name.lower()]
+
+print(f"Found {len(set(y_true) & set(tomato_classes))}/{len(tomato_classes)} tomato classes in test data")
+print(f"Found {len(set(y_true) & set(apple_classes))}/{len(apple_classes)} apple classes in test data")
+
+# Generate classification report with all classes
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+
+# Define class_labels based on the class indices
+class_labels = list(class_indices.keys())
+
+# Make sure to collect data from both apple and tomato classes
+print(f"Total unique classes in y_true: {len(set(y_true))}")
+print(f"Classes found in test data: {[class_labels[i] for i in sorted(set(y_true))]}")
 
 # Get unique classes that actually appear in the test data
 unique_classes = sorted(set(y_true))
 # Use only the class labels that correspond to classes found in the test data
 filtered_class_labels = [class_labels[i] for i in unique_classes]
 
-# Create classification report with the correct target names
+# Create a comprehensive class list with both apple and tomato classes
+has_apple = any('apple' in class_name.lower() for class_name in filtered_class_labels)
+has_tomato = any('tomato' in class_name.lower() for class_name in filtered_class_labels)
+
+if not has_apple or not has_tomato:
+    print("WARNING: Not all fruit types represented in the test data!")
+    print("This might lead to incomplete classification reports.")
+
+# Create classification report
 report = classification_report(y_true, y_pred, 
-                               labels=unique_classes,  # Use only classes present in test data
+                               labels=unique_classes,
                                target_names=filtered_class_labels)
 print("\nClassification Report:")
 print(report)
@@ -310,7 +362,7 @@ with open('output/metrics_summary.txt', 'w') as f:
     f.write("Per-Class Accuracy:\n")
     for class_name, acc in class_accuracy.items():
         f.write(f"  {class_name}: {acc:.4f}\n")
-    f.write("\nTraining completed in {len(history.history['accuracy'])} epochs\n")
+    f.write(f"\nTraining completed in {len(history.history['accuracy'])} epochs\n")
     f.write(f"Final Training Accuracy: {history.history['accuracy'][-1]:.4f}\n")
     f.write(f"Final Validation Accuracy: {history.history['val_accuracy'][-1]:.4f}\n")
 

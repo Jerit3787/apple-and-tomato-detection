@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Results - Fruit Identifier</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .container {
+            margin-top: 50px;
+            padding: 30px;
+            border-radius: 15px;
+            background-color: white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            max-width: 1000px;
+            margin-bottom: 50px;
+        }
+        
+        h1 {
+            color: #28a745;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        
+        .feature-buttons {
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .result-card {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .result-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .result-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        
+        .result-details {
+            padding: 15px;
+            background-color: #f8f9fa;
+        }
+        
+        .result-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+        
+        .confidence-meter {
+            height: 10px;
+            border-radius: 5px;
+            background-color: #e9ecef;
+            margin: 8px 0;
+            overflow: hidden;
+        }
+        
+        .confidence-level {
+            height: 100%;
+            background-color: #28a745;
+        }
+        
+        .apple-label {
+            color: #dc3545;
+        }
+        
+        .tomato-label {
+            color: #dc3545;
+        }
+        
+        .filters {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        
+        .summary-card {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .summary-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .summary-numbers {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+        }
+        
+        .summary-item {
+            text-align: center;
+        }
+        
+        .summary-count {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .summary-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .error-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8d7da;
+            border-radius: 10px;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .error-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .error-filename {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .error-message {
+            color: #721c24;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="text-center">Batch Processing Results</h1>
+
+        <div class="feature-buttons">
+            <a href="/" class="btn btn-outline-success"><i class="fas fa-home"></i> Home</a>
+            <a href="/history" class="btn btn-outline-info"><i class="fas fa-history"></i> History</a>
+            <a href="/camera" class="btn btn-outline-primary"><i class="fas fa-camera"></i> Camera Detection</a>
+            <a href="/batch" class="btn btn-outline-warning"><i class="fas fa-images"></i> Batch Process</a>
+            <a href="/compare" class="btn btn-outline-secondary"><i class="fas fa-exchange-alt"></i> Compare</a>
+            <a href="/stats" class="btn btn-outline-dark"><i class="fas fa-chart-pie"></i> Statistics</a>
+            <a href="/export/csv" class="btn btn-outline-danger"><i class="fas fa-file-export"></i> Export CSV</a>
+        </div>
+
+        {% if errors %}
+        <div class="error-section">
+            <h4><i class="fas fa-exclamation-triangle text-danger"></i> Processing Errors ({{ errors|length }})</h4>
+            <p>The following files could not be processed:</p>
+
+            <div class="error-list">
+                {% for error in errors %}
+                <div class="error-card">
+                    <div class="error-filename">{{ error.filename }}</div>
+                    <div class="error-message">{{ error.error }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %} {% if results %}
+        <div class="summary-card">
+            <h3>Batch Summary</h3>
+            <div class="summary-numbers">
+                <div class="summary-item">
+                    <div class="summary-count">{{ results|length }}</div>
+                    <div class="summary-label">Total Images</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-count apple-count">{{ results|selectattr('prediction', 'eq', 'apple')|list|length }}</div>
+                    <div class="summary-label">Apples</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-count tomato-count">{{ results|selectattr('prediction', 'eq', 'tomato')|list|length }}</div>
+                    <div class="summary-label">Tomatoes</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-count">{{ results|selectattr('confidence', '>=', '90%')|list|length }}</div>
+                    <div class="summary-label">High Confidence (≥90%)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filters">
+            <button class="btn btn-sm btn-outline-secondary filter-btn" data-filter="all">All</button>
+            <button class="btn btn-sm btn-outline-danger filter-btn" data-filter="apple">Apples</button>
+            <button class="btn btn-sm btn-outline-danger filter-btn" data-filter="tomato">Tomatoes</button>
+        </div>
+
+        <div class="results-grid">
+            {% for result in results %}
+            <div class="result-card" data-class="{{ result.prediction }}">
+                <img src="{{ result.file_path }}" class="result-image" alt="Result Image">
+                <div class="result-details">
+                    <div class="result-label">
+                        {% if result.prediction == 'apple' %}
+                        <span class="apple-label">Apple</span> {% elif result.prediction == 'tomato' %}
+                        <span class="tomato-label">Tomato</span> {% else %} {{ result.prediction }} {% endif %}
+                    </div>
+                    <div class="confidence-text">Confidence: {{ result.confidence }}</div>
+                    <div class="confidence-meter">
+                        <div class="confidence-level" style="width: {{ result.confidence }}"></div>
+                    </div>
+                    <div class="mt-2">
+                        <a href="/analysis/{{ result.id }}" class="btn btn-sm btn-info w-100">
+                            <i class="fas fa-search-plus"></i> View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center mt-5">
+            <i class="fas fa-exclamation-circle fa-3x text-warning mb-3"></i>
+            <h4>No results available</h4>
+            <p class="text-muted">
+                {% if errors %} Some files had errors and no valid images were successfully processed. {% else %} No images were processed in the batch. {% endif %}
+            </p>
+            <a href="/batch" class="btn btn-primary mt-3">Try Again</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // Initialize filter buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            const resultCards = document.querySelectorAll('.result-card');
+
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Remove active class from all buttons
+                    filterButtons.forEach(btn => btn.classList.remove('active', 'btn-primary', 'btn-danger', 'btn-secondary'));
+                    filterButtons.forEach(btn => btn.classList.add('btn-outline-' + (btn.dataset.filter === 'apple' || btn.dataset.filter === 'tomato' ? 'danger' : 'secondary')));
+
+                    // Add active class to clicked button
+                    this.classList.remove('btn-outline-secondary', 'btn-outline-danger');
+                    this.classList.add('active');
+                    if (this.dataset.filter === 'apple' || this.dataset.filter === 'tomato') {
+                        this.classList.add('btn-danger');
+                    } else {
+                        this.classList.add('btn-secondary');
+                    }
+
+                    // Filter the cards
+                    const filter = this.dataset.filter;
+                    resultCards.forEach(card => {
+                        if (filter === 'all' || card.dataset.class === filter) {
+                            card.style.display = 'block';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            });
+
+            // Set "All" as active by default
+            filterButtons[0].click();
+        });
+    </script>
+</body>
+
+</html>

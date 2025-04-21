@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Comparison - Fruit Identifier</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .container {
+            margin-top: 50px;
+            padding: 30px;
+            border-radius: 15px;
+            background-color: white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            max-width: 1000px;
+            margin-bottom: 50px;
+        }
+        
+        h1 {
+            color: #28a745;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        
+        .feature-buttons {
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .comparison-table {
+            margin-top: 30px;
+        }
+        
+        .comparison-image {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .comparison-row td {
+            padding: 20px;
+            vertical-align: middle;
+        }
+        
+        .comparison-header {
+            font-weight: 600;
+            font-size: 1.2rem;
+            background-color: #f8f9fa;
+        }
+        
+        .different {
+            color: #dc3545;
+        }
+        
+        .same {
+            color: #28a745;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="text-center">Image Comparison</h1>
+
+        <div class="feature-buttons">
+            <a href="/" class="btn btn-outline-success"><i class="fas fa-home"></i> Home</a>
+            <a href="/history" class="btn btn-outline-info"><i class="fas fa-history"></i> History</a>
+            <a href="/camera" class="btn btn-outline-primary"><i class="fas fa-camera"></i> Camera Detection</a>
+            <a href="/batch" class="btn btn-outline-warning"><i class="fas fa-images"></i> Batch Process</a>
+            <a href="/compare" class="btn btn-outline-secondary"><i class="fas fa-exchange-alt"></i> Compare</a>
+            <a href="/stats" class="btn btn-outline-dark"><i class="fas fa-chart-pie"></i> Statistics</a>
+            <a href="/export/csv" class="btn btn-outline-danger"><i class="fas fa-file-export"></i> Export CSV</a>
+        </div>
+
+        {% if image1_path and image2_path %}
+        <div class="comparison-table">
+            <table class="table table-bordered">
+                <thead>
+                    <tr class="comparison-header text-center">
+                        <th>Feature</th>
+                        <th>Image 1</th>
+                        <th>Image 2</th>
+                        <th>Comparison</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="comparison-row">
+                        <td class="font-weight-bold">Image</td>
+                        <td class="text-center">
+                            <img src="{{ image1_path }}" class="comparison-image" alt="Image 1">
+                        </td>
+                        <td class="text-center">
+                            <img src="{{ image2_path }}" class="comparison-image" alt="Image 2">
+                        </td>
+                        <td>
+                            <span class="different"><i class="fas fa-images"></i> Visual comparison</span>
+                        </td>
+                    </tr>
+                    <tr class="comparison-row">
+                        <td class="font-weight-bold">Prediction</td>
+                        <td>{{ prediction1 }}</td>
+                        <td>{{ prediction2 }}</td>
+                        <td>
+                            {% if prediction1 == prediction2 %}
+                            <span class="same"><i class="fas fa-check-circle"></i> Same</span> {% else %}
+                            <span class="different"><i class="fas fa-times-circle"></i> Different</span> {% endif %}
+                        </td>
+                    </tr>
+                    <tr class="comparison-row">
+                        <td class="font-weight-bold">Confidence</td>
+                        <td>{{ confidence1 }}</td>
+                        <td>{{ confidence2 }}</td>
+                        <td>
+                            {% if confidence1 == confidence2 %}
+                            <span class="same"><i class="fas fa-check-circle"></i> Same</span> {% else %}
+                            <span class="different"><i class="fas fa-times-circle"></i> Different</span> {% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="/compare" class="btn btn-outline-secondary">Compare Different Images</a>
+        </div>
+        {% else %}
+        <div class="text-center mt-5">
+            <i class="fas fa-exclamation-circle fa-3x text-warning mb-3"></i>
+            <h4>Comparison Not Available</h4>
+            <p class="text-muted">Please select two images to compare.</p>
+            <a href="/compare" class="btn btn-primary mt-3">Select Images</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>

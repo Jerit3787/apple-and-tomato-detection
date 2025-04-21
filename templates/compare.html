@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare Images - Fruit Identifier</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .container {
+            margin-top: 50px;
+            padding: 30px;
+            border-radius: 15px;
+            background-color: white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            max-width: 1000px;
+            margin-bottom: 50px;
+        }
+        
+        h1 {
+            color: #28a745;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        
+        .feature-buttons {
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .image-selector {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .history-preview {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        
+        .history-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .history-item:hover {
+            background-color: #e9ecef;
+        }
+        
+        .history-item.selected {
+            background-color: #d4edda;
+            border: 2px solid #28a745;
+        }
+        
+        .history-image {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        
+        .no-history {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .apple-color {
+            color: #dc3545;
+        }
+        
+        .tomato-color {
+            color: #dc3545;
+        }
+        
+        .comparison-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .compare-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        
+        .compare-card {
+            width: 45%;
+            min-width: 300px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .compare-image {
+            width: 100%;
+            height: 250px;
+            object-fit: contain;
+            background-color: #f8f9fa;
+        }
+        
+        .compare-details {
+            padding: 15px;
+            background-color: #f8f9fa;
+        }
+        
+        .confidence-meter {
+            height: 10px;
+            border-radius: 5px;
+            background-color: #e9ecef;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .confidence-level {
+            height: 100%;
+            background-color: #28a745;
+        }
+        
+        .comparison-divider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #6c757d;
+        }
+        
+        @media (max-width: 768px) {
+            .compare-card {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="text-center">Compare Images</h1>
+
+        <div class="feature-buttons">
+            <a href="/" class="btn btn-outline-success"><i class="fas fa-home"></i> Home</a>
+            <a href="/history" class="btn btn-outline-info"><i class="fas fa-history"></i> History</a>
+            <a href="/camera" class="btn btn-outline-primary"><i class="fas fa-camera"></i> Camera Detection</a>
+            <a href="/batch" class="btn btn-outline-warning"><i class="fas fa-images"></i> Batch Process</a>
+            <a href="/compare" class="btn btn-outline-secondary"><i class="fas fa-exchange-alt"></i> Compare</a>
+            <a href="/stats" class="btn btn-outline-dark"><i class="fas fa-chart-pie"></i> Statistics</a>
+            <a href="/export/csv" class="btn btn-outline-danger"><i class="fas fa-file-export"></i> Export CSV</a>
+        </div>
+
+        {% if prediction1 and prediction2 %}
+        <!-- Comparison view when both images are selected -->
+        <div class="comparison-container">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Comparing two images and their predictions side by side.
+            </div>
+
+            <div class="compare-images">
+                <div class="compare-card">
+                    <img src="{{ prediction1.file_path.replace('\\', '/') }}" class="compare-image" alt="Image 1">
+                    <div class="compare-details">
+                        <h5>
+                            {% if prediction1.prediction == 'apple' %}
+                            <span class="apple-color">Apple</span> {% elif prediction1.prediction == 'tomato' %}
+                            <span class="tomato-color">Tomato</span> {% else %} {{ prediction1.prediction }} {% endif %}
+                        </h5>
+                        <p class="text-muted small">{{ prediction1.original_class }}</p>
+                        <p>Confidence: {{ prediction1.confidence_message }}</p>
+                        <div class="confidence-meter">
+                            <div class="confidence-level" style="width: {{ prediction1.confidence_message }}"></div>
+                        </div>
+                        <div class="mt-2">
+                            <a href="/analysis/{{ prediction1.id }}" class="btn btn-sm btn-info">
+                                <i class="fas fa-search-plus"></i> Detailed Analysis
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-divider d-none d-md-flex">
+                    <i class="fas fa-exchange-alt"></i>
+                </div>
+
+                <div class="compare-card">
+                    <img src="{{ prediction2.file_path.replace('\\', '/') }}" class="compare-image" alt="Image 2">
+                    <div class="compare-details">
+                        <h5>
+                            {% if prediction2.prediction == 'apple' %}
+                            <span class="apple-color">Apple</span> {% elif prediction2.prediction == 'tomato' %}
+                            <span class="tomato-color">Tomato</span> {% else %} {{ prediction2.prediction }} {% endif %}
+                        </h5>
+                        <p class="text-muted small">{{ prediction2.original_class }}</p>
+                        <p>Confidence: {{ prediction2.confidence_message }}</p>
+                        <div class="confidence-meter">
+                            <div class="confidence-level" style="width: {{ prediction2.confidence_message }}"></div>
+                        </div>
+                        <div class="mt-2">
+                            <a href="/analysis/{{ prediction2.id }}" class="btn btn-sm btn-info">
+                                <i class="fas fa-search-plus"></i> Detailed Analysis
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="/compare" class="btn btn-outline-secondary">Compare Different Images</a>
+            </div>
+        </div>
+        {% else %}
+        <!-- Selection view when images need to be chosen -->
+        <div class="image-selector">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Select two images from your prediction history to compare side by side.
+            </div>
+
+            <form action="/compare" method="post">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="image1"><b>First Image:</b></label> {% if request.args.get('image1') %}
+                            <div class="selected-info alert alert-success">
+                                Image #{{ request.args.get('image1') }} selected
+                            </div>
+                            <input type="hidden" name="image1" value="{{ request.args.get('image1') }}"> {% else %}
+                            <select class="form-control" id="image1" name="image1" required>
+                                <option value="">Select first image...</option>
+                                {% for item in history %}
+                                <option value="{{ item.id }}">
+                                    {{ item.id }}: {{ item.prediction }} ({{ item.confidence_message }}) - {{ item.timestamp }}
+                                </option>
+                                {% endfor %}
+                            </select> {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="image2"><b>Second Image:</b></label>
+                            <select class="form-control" id="image2" name="image2" required>
+                                <option value="">Select second image...</option>
+                                {% for item in history %}
+                                <option value="{{ item.id }}">
+                                    {{ item.id }}: {{ item.prediction }} ({{ item.confidence_message }}) - {{ item.timestamp }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-3">
+                    <button type="submit" class="btn btn-primary" id="compareBtn">
+                        <i class="fas fa-exchange-alt"></i> Compare Images
+                    </button>
+                </div>
+            </form>
+
+            {% if history %}
+            <div class="mt-4">
+                <h5>Recent Predictions</h5>
+                <div class="history-preview">
+                    {% for item in history %}
+                    <div class="history-item" data-id="{{ item.id }}">
+                        <img src="{{ item.file_path.replace('\\', '/') }}" class="history-image" alt="History image">
+                        <div>
+                            <strong>ID: {{ item.id }}</strong> - {% if item.prediction == 'apple' %}
+                            <span class="apple-color">Apple</span> {% elif item.prediction == 'tomato' %}
+                            <span class="tomato-color">Tomato</span> {% else %} {{ item.prediction }} {% endif %} ({{ item.confidence_message }})
+                            <div class="small text-muted">{{ item.timestamp }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="no-history mt-4">
+                <i class="fas fa-history fa-3x mb-3 text-muted"></i>
+                <h5>No prediction history yet</h5>
+                <p class="text-muted">Make some predictions first!</p>
+                <a href="/" class="btn btn-success mt-2">Go to Home</a>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Make history items clickable for selection
+            const historyItems = document.querySelectorAll('.history-item');
+            const image1Select = document.getElementById('image1');
+            const image2Select = document.getElementById('image2');
+
+            if (historyItems.length > 0 && image1Select && image2Select) {
+                historyItems.forEach(item => {
+                    item.addEventListener('click', function() {
+                        const id = this.dataset.id;
+
+                        // If image1 is not set, set it first
+                        if (!image1Select.value) {
+                            image1Select.value = id;
+                            this.classList.add('selected');
+                        }
+                        // Otherwise set image2, but not if it's the same as image1
+                        else if (!image2Select.value && image1Select.value !== id) {
+                            image2Select.value = id;
+                            this.classList.add('selected');
+
+                            // Enable the compare button
+                            document.getElementById('compareBtn').disabled = false;
+                        }
+                        // If clicking on an already selected item, deselect it
+                        else if (image1Select.value === id) {
+                            image1Select.value = '';
+                            this.classList.remove('selected');
+                        } else if (image2Select.value === id) {
+                            image2Select.value = '';
+                            this.classList.remove('selected');
+                        }
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>

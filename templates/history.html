@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediction History - Fruit Identifier</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .container {
+            margin-top: 50px;
+            padding: 30px;
+            border-radius: 15px;
+            background-color: white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+        }
+        
+        h1 {
+            color: #28a745;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        
+        .feature-buttons {
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .history-item {
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            background-color: #f8f9fa;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+        }
+        
+        .history-image {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-right: 15px;
+        }
+        
+        .history-details {
+            flex-grow: 1;
+        }
+        
+        .apple-label {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .tomato-label {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .confidence-meter {
+            height: 10px;
+            border-radius: 5px;
+            background-color: #e9ecef;
+            margin: 10px 0;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        .confidence-level {
+            height: 100%;
+            background-color: #28a745;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .no-history {
+            text-align: center;
+            padding: 40px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="text-center">Prediction History</h1>
+
+        <div class="feature-buttons">
+            <a href="/" class="btn btn-outline-success"><i class="fas fa-home"></i> Home</a>
+            <a href="/history" class="btn btn-outline-info"><i class="fas fa-history"></i> History</a>
+            <a href="/camera" class="btn btn-outline-primary"><i class="fas fa-camera"></i> Camera Detection</a>
+            <a href="/batch" class="btn btn-outline-warning"><i class="fas fa-images"></i> Batch Process</a>
+            <a href="/compare" class="btn btn-outline-secondary"><i class="fas fa-exchange-alt"></i> Compare</a>
+            <a href="/stats" class="btn btn-outline-dark"><i class="fas fa-chart-pie"></i> Statistics</a>
+            <a href="/export/csv" class="btn btn-outline-danger"><i class="fas fa-file-export"></i> Export CSV</a>
+        </div>
+
+        {% if history and history|length > 0 %}
+        <div class="history-container">
+            {% for item in history %}
+            <div class="history-item">
+                <img src="{{ item.file_path.replace('\\', '/') }}" class="history-image" alt="Prediction image">
+                <div class="history-details">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5>
+                            {% if item.prediction == 'apple' %}
+                            <span class="badge apple-label">Apple</span> {% elif item.prediction == 'tomato' %}
+                            <span class="badge tomato-label">Tomato</span> {% else %}
+                            <span class="badge badge-secondary">{{ item.prediction }}</span> {% endif %}
+                            <small class="text-muted ml-2">{{ item.original_class }}</small>
+                        </h5>
+                        <span class="text-muted">{{ item.timestamp }}</span>
+                    </div>
+                    <p class="mb-1">Confidence: {{ item.confidence_message }}</p>
+                    <div class="confidence-meter">
+                        <div class="confidence-level" style="width: {{ item.confidence_message }}"></div>
+                    </div>
+                    <div class="action-buttons mt-2">
+                        <a href="/analysis/{{ item.id }}" class="btn btn-sm btn-info">
+                            <i class="fas fa-search-plus"></i> Detailed Analysis
+                        </a>
+                        <a href="/compare?image1={{ item.id }}" class="btn btn-sm btn-secondary">
+                            <i class="fas fa-exchange-alt"></i> Compare
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-history">
+            <i class="fas fa-history fa-3x mb-3 text-muted"></i>
+            <h4>No prediction history yet</h4>
+            <p class="text-muted">Start by identifying some fruits!</p>
+            <a href="/" class="btn btn-success mt-3">Go to Home</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>
