@@ -1,0 +1,31 @@
+Test Accuracy: 0.9831
+
+                        precision    recall  f1-score   support
+
+              Apple 10       1.00      1.00      1.00       231
+              Apple 11       1.00      1.00      1.00       142
+              Apple 12       1.00      1.00      1.00       154
+              Apple 13       1.00      1.00      1.00       231
+              Apple 14       1.00      0.95      0.97       154
+              Apple 17       0.97      0.97      0.97       243
+              Apple 18       1.00      0.95      0.97       162
+              Apple 19       1.00      1.00      1.00       241
+               Apple 5       1.00      1.00      1.00       146
+               Apple 7       1.00      1.00      1.00       229
+               Apple 8       0.97      1.00      0.98       228
+               Apple 9       1.00      1.00      1.00       231
+              Tomato 1       0.91      0.95      0.93       216
+             Tomato 10       0.97      1.00      0.98       228
+              Tomato 5       0.95      0.91      0.93       222
+              Tomato 7       1.00      1.00      1.00       231
+              Tomato 8       0.90      1.00      0.95       239
+              Tomato 9       1.00      0.89      0.94       239
+Tomato Cherry Maroon 1       1.00      1.00      1.00       100
+Tomato Cherry Orange 1       1.00      1.00      1.00       100
+   Tomato Cherry Red 2       1.00      1.00      1.00       100
+Tomato Cherry Yellow 1       1.00      1.00      1.00       100
+       Tomato Maroon 2       1.00      1.00      1.00       121
+
+              accuracy                           0.98      4288
+             macro avg       0.99      0.98      0.98      4288
+          weighted avg       0.98      0.98      0.98      4288

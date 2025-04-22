@@ -1,0 +1,36 @@
+MODEL PERFORMANCE METRICS
+========================
+
+Test Accuracy: 0.9831
+Test Loss: 0.0434
+
+Simplified Apple vs Tomato Accuracy: 0.9981
+
+Per-Class Accuracy:
+  Apple 10: 1.0000
+  Apple 11: 1.0000
+  Apple 12: 1.0000
+  Apple 13: 1.0000
+  Apple 14: 0.9481
+  Apple 17: 0.9712
+  Apple 18: 0.9506
+  Apple 19: 1.0000
+  Apple 5: 1.0000
+  Apple 7: 1.0000
+  Apple 8: 1.0000
+  Apple 9: 1.0000
+  Tomato 1: 0.9491
+  Tomato 10: 1.0000
+  Tomato 5: 0.9099
+  Tomato 7: 1.0000
+  Tomato 8: 1.0000
+  Tomato 9: 0.8870
+  Tomato Cherry Maroon 1: 1.0000
+  Tomato Cherry Orange 1: 1.0000
+  Tomato Cherry Red 2: 1.0000
+  Tomato Cherry Yellow 1: 1.0000
+  Tomato Maroon 2: 1.0000
+
+Training completed in 20 epochs
+Final Training Accuracy: 0.9200
+Final Validation Accuracy: 0.9794
