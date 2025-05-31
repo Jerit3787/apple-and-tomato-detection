@@ -336,6 +336,7 @@
         function displayResult(data) {
             resultCard.style.display = 'block';
 
+            // Set prediction class styling
             if (data.prediction === 'apple') {
                 predictionSpan.className = 'apple-color';
                 resultCard.className = 'result-card apple-result';
@@ -356,6 +357,58 @@
             } else {
                 document.querySelector('.prediction-confidence').style.display = 'none';
             }
+
+            // Display bounding box info if detection model is active
+            if (data.model_type === 'detection' && data.bbox) {
+                // Add bounding box info to result display
+                let bboxInfo = document.getElementById('bboxInfo');
+                if (!bboxInfo) {
+                    bboxInfo = document.createElement('div');
+                    bboxInfo.id = 'bboxInfo';
+                    bboxInfo.innerHTML = `
+                        <div class="mt-3">
+                            <h6><i class="fas fa-crosshairs"></i> Detection Coordinates</h6>
+                            <small id="bboxCoords" class="text-muted"></small>
+                        </div>
+                    `;
+                    resultCard.appendChild(bboxInfo);
+                }
+                
+                const coords = `X: ${data.bbox.x.toFixed(2)}, Y: ${data.bbox.y.toFixed(2)}, W: ${data.bbox.width.toFixed(2)}, H: ${data.bbox.height.toFixed(2)}`;
+                document.getElementById('bboxCoords').textContent = coords;
+                
+                // Draw bounding box on canvas (optional visual enhancement)
+                if (data.bbox.x >= 0 && data.bbox.y >= 0) {
+                    drawBoundingBox(data.bbox);
+                }
+            } else {
+                // Remove bounding box info if not detection model
+                const bboxInfo = document.getElementById('bboxInfo');
+                if (bboxInfo) {
+                    bboxInfo.remove();
+                }
+            }
+        }
+
+        // Draw bounding box on canvas
+        function drawBoundingBox(bbox) {
+            const ctx = canvas.getContext('2d');
+            
+            // Convert normalized coordinates to canvas coordinates
+            const x = bbox.x * canvas.width;
+            const y = bbox.y * canvas.height;
+            const width = bbox.width * canvas.width;
+            const height = bbox.height * canvas.height;
+            
+            // Draw bounding box
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, width, height);
+            
+            // Clear the bounding box after 2 seconds
+            setTimeout(() => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }, 2000);
         }
 
         // Start detection loop

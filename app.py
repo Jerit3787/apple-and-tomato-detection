@@ -6,7 +6,7 @@ from io import StringIO, BytesIO
 from flask import Flask, request, render_template, jsonify, send_file, Response, redirect, url_for
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
-from PIL import Image, ImageEnhance, UnidentifiedImageError
+from PIL import Image, ImageEnhance, UnidentifiedImageError, ImageDraw, ImageFont
 import json
 
 # Initialize the Flask application
@@ -15,45 +15,126 @@ app = Flask(__name__)
 # Global variable to store prediction history
 prediction_history = []
 
-# Load the trained model
-model = load_model('output/model.keras')
+# Available models configuration
+AVAILABLE_MODELS = {
+    'basic': {
+        'name': 'Basic CNN',
+        'path': 'output/model.keras',
+        'class_indices_path': 'output/class_indices.json',
+        'img_size': 128,
+        'type': 'classification',
+        'description': 'Original basic CNN model for classification'
+    },
+    'resnet50': {
+        'name': 'ResNet50 (Advanced)',
+        'path': 'output_advanced/best_model_resnet50.keras',
+        'class_indices_path': 'output_advanced/class_indices_resnet50.json',
+        'img_size': 224,
+        'type': 'classification',
+        'description': 'Advanced ResNet50 transfer learning model'
+    },
+    'mobilenetv2': {
+        'name': 'MobileNetV2 (Advanced)',
+        'path': 'output_advanced/model/best_model_mobilenetv2.keras',
+        'class_indices_path': 'output_advanced/class_indices_mobilenetv2.json',
+        'img_size': 224,
+        'type': 'classification',
+        'description': 'Lightweight MobileNetV2 model optimized for speed'
+    },
+    'vgg16': {
+        'name': 'VGG16 (Advanced)',
+        'path': 'output_advanced/model/best_model_vgg16 (2).keras',
+        'class_indices_path': 'output_advanced/class_indices_vgg16.json',
+        'img_size': 224,
+        'type': 'classification',
+        'description': 'Deep VGG16 transfer learning model'
+    },
+    'detection': {
+        'name': 'Object Detection (ResNet50)',
+        'path': 'output_detection/detection_model.keras',
+        'class_indices_path': 'output_detection/class_indices.json',  # Use basic indices as fallback
+        'img_size': 224,
+        'type': 'detection',
+        'description': 'Object detection with bounding box localization (86% accuracy)'
+    }
+}
 
-# Load the JSON file
-with open("output/class_indices.json", "r") as f:
-    class_indices = json.load(f)
+# Current model configuration
+current_model_key = 'basic'  # Default to basic model
+current_model = None
+current_class_indices = None
+current_class_names = None
+current_simplified_classes = None
+current_indexed_simple_classes = None
+current_img_size = None
 
-# Define the classes (update this list based on your model's classes)
-class_names = list(class_indices.keys())  # Add your actual class names
+def load_selected_model(model_key):
+    """Load the selected model and its configuration"""
+    global current_model, current_class_indices, current_class_names
+    global current_simplified_classes, current_indexed_simple_classes, current_img_size
+    global current_model_key
+    
+    if model_key not in AVAILABLE_MODELS:
+        raise ValueError(f"Unknown model: {model_key}")
+    
+    model_config = AVAILABLE_MODELS[model_key]
+    
+    # Load the model
+    print(f"Loading model: {model_config['name']}")
+    current_model = load_model(model_config['path'])
+    current_img_size = model_config['img_size']
+    current_model_key = model_key
+    
+    # Try to load class indices, fallback to basic model's indices if not found
+    try:
+        with open(model_config['class_indices_path'], "r") as f:
+            current_class_indices = json.load(f)
+    except FileNotFoundError:
+        print(f"Class indices not found for {model_key}, using basic model indices")
+        with open(AVAILABLE_MODELS['basic']['class_indices_path'], "r") as f:
+            current_class_indices = json.load(f)
+    
+    # Define the classes
+    current_class_names = list(current_class_indices.keys())
+    
+    # Create a simplified mapping for prediction display
+    current_simplified_classes = {}
+    for name in current_class_names:
+        if 'apple' in name.lower() or 'Apple' in name:
+            current_simplified_classes[name] = 'apple'
+        elif 'tomato' in name.lower() or 'Tomato' in name:
+            current_simplified_classes[name] = 'tomato'
+        else:
+            current_simplified_classes[name] = name
+    
+    print("Original classes:", current_class_names)
+    print("Simplified to:", set(current_simplified_classes.values()))
+    
+    # Create a mapping that preserves the original indices
+    current_indexed_simple_classes = {}
+    for name, idx in current_class_indices.items():
+        current_indexed_simple_classes[idx] = current_simplified_classes[name]
+    
+    # Create the final class_names array that maintains the original positions
+    current_class_names = [current_indexed_simple_classes[i] for i in range(len(current_class_indices))]
+    
+    print(f"Final class names for display (preserving indices): {current_class_names}")
+    print(f"Model loaded successfully: {model_config['name']}")
 
-# Create a simplified mapping for prediction display
-simplified_classes = {}
-for name in class_names:
-    if 'apple' in name.lower() or 'Apple' in name:
-        simplified_classes[name] = 'apple'
-    elif 'tomato' in name.lower() or 'Tomato' in name:
-        simplified_classes[name] = 'tomato'
-    else:
-        simplified_classes[name] = name  # Keep original if not apple or tomato
+# Load default model
+load_selected_model('basic')
 
-print("Original classes:", class_names)
-print("Simplified to:", set(simplified_classes.values()))
-
-# Create a mapping that preserves the original indices
-indexed_simple_classes = {}
-for name, idx in class_indices.items():
-    indexed_simple_classes[idx] = simplified_classes[name]
-
-# Create the final class_names array that maintains the original positions
-class_names = [indexed_simple_classes[i] for i in range(len(class_indices))]
-
-print("Final class names for display (preserving indices):", class_names)
+# Legacy variables for backward compatibility
+model = current_model
+class_indices = current_class_indices
+class_names = current_class_names
+simplified_classes = current_simplified_classes
+indexed_simple_classes = current_indexed_simple_classes
+IMG_SIZE = current_img_size
 
 # Define the upload folder
 UPLOAD_FOLDER = 'uploads/'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# Define the image size
-IMG_SIZE = 128  # Must match what was used during training
 
 # Statistics dictionary to track usage
 stats = {
@@ -122,7 +203,10 @@ def safe_load_image(file_path, target_size=None):
 
 @app.route('/')
 def home():
-    return render_template('index.html', history=prediction_history[:5])
+    return render_template('index.html', 
+                          history=prediction_history[:5],
+                          current_model=AVAILABLE_MODELS[current_model_key]['name'],
+                          available_models=AVAILABLE_MODELS)
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -153,20 +237,24 @@ def predict():
 
     try:
         # Load and preprocess the image using our safe image loader
-        img_array, _ = safe_load_image(file_path, target_size=(IMG_SIZE, IMG_SIZE))
+        img_array, _ = safe_load_image(file_path, target_size=(current_img_size, current_img_size))
 
-        # Make prediction
-        predictions = model.predict(img_array)
-        predicted_idx = np.argmax(predictions[0])
-        predicted_class = class_names[predicted_idx]
-        confidence = float(np.max(predictions[0]))
+        # Make prediction with detection awareness
+        model_type = AVAILABLE_MODELS[current_model_key]['type']
+        predicted_idx, predicted_class, confidence, predictions, bbox = predict_with_model(img_array, model_type)
         
         # Apply confidence threshold
         confidence_message = f"{confidence:.1%}"
         
         # Get original class name for debugging
-        original_class_name = list(class_indices.keys())[list(class_indices.values()).index(predicted_idx)]
+        original_class_name = list(current_class_indices.keys())[list(current_class_indices.values()).index(predicted_idx)]
         print(f"Prediction: {original_class_name} ({predicted_class}) with confidence: {confidence:.4f}")
+        
+        # Add bounding box info if detection model
+        bbox_info = None
+        if bbox is not None:
+            bbox_info = bbox
+            print(f"Bounding box: {bbox}")
         
         # Update statistics
         stats['total_predictions'] += 1
@@ -187,7 +275,9 @@ def predict():
             'prediction': predicted_class,
             'confidence': confidence,
             'confidence_message': confidence_message,
-            'original_class': original_class_name
+            'original_class': original_class_name,
+            'model_type': model_type,
+            'bbox': bbox_info
         }
         
         # Add to history (limit to most recent 20)
@@ -203,8 +293,12 @@ def predict():
                             prediction=predicted_class, 
                             confidence=confidence_message,
                             number=predicted_idx,
+                            prediction_id=history_entry['id'],  # Add the correct history entry ID
                             original_class=original_class_name,
                             image_path=image_url,
+                            bbox=bbox_info,
+                            model_type=model_type,
+                            current_model=AVAILABLE_MODELS[current_model_key]['name'],
                             history=prediction_history[:5])
     except Exception as e:
         print(f"Error processing image: {e}")
@@ -231,27 +325,16 @@ def predict_api():
     file.save(file_path)
 
     # Load and preprocess the image
-    img_array, _ = safe_load_image(file_path, target_size=(IMG_SIZE, IMG_SIZE))
+    img_array, _ = safe_load_image(file_path, target_size=(current_img_size, current_img_size))
 
-    # Make prediction with more detail
-    predictions = model.predict(img_array)
-    predicted_idx = np.argmax(predictions[0])
-    predicted_class = class_names[predicted_idx]
-    confidence = float(np.max(predictions[0]))
+    # Make prediction with detection awareness
+    model_type = AVAILABLE_MODELS[current_model_key]['type']
+    predicted_idx, predicted_class, confidence, predictions, bbox = predict_with_model(img_array, model_type)
     
     # Get detailed class information
-    original_class_name = list(class_indices.keys())[list(class_indices.values()).index(predicted_idx)]
-    
-    # Log all tomato class probabilities for debugging
-    print("All class probabilities:")
-    for i, prob in enumerate(predictions[0]):
-        if prob > 0.001:  # Only show non-zero probabilities
-            class_name = list(class_indices.keys())[list(class_indices.values()).index(i)]
-            simplified = simplified_classes[class_name]
-            print(f"  {class_name} ({simplified}): {prob:.4f}")
+    original_class_name = list(current_class_indices.keys())[list(current_class_indices.values()).index(predicted_idx)]
     
     # Apply confidence threshold for better reliability
-    # If confidence is too low, provide feedback about uncertainty
     if confidence < 0.5:
         prediction_message = f"Uncertain, but looks like a {predicted_class}"
     else:
@@ -259,6 +342,8 @@ def predict_api():
     
     # Log prediction details for debugging
     print(f"Prediction: {original_class_name} ({predicted_class}) with confidence: {confidence:.4f}")
+    if bbox:
+        print(f"Bounding box: {bbox}")
     
     # Update statistics
     stats['total_predictions'] += 1
@@ -279,7 +364,9 @@ def predict_api():
         'prediction': predicted_class,
         'confidence': confidence,
         'confidence_message': f"{confidence:.1%}",
-        'original_class': original_class_name
+        'original_class': original_class_name,
+        'model_type': model_type,
+        'bbox': bbox
     }
     
     # Add to history
@@ -287,22 +374,82 @@ def predict_api():
     if len(prediction_history) > 20:
         prediction_history.pop()
     
-    # Return detailed response
-    return jsonify({
+    # Prepare response
+    response_data = {
         'prediction': prediction_message,
         'confidence': confidence,
         'confidence_percent': f"{confidence:.1%}",
         'class_index': int(predicted_idx),
         'original_class': original_class_name,
-        'all_confidences': {class_names[i]: float(predictions[0][i]) for i in range(len(class_names)) 
+        'model_type': model_type,
+        'all_confidences': {current_class_names[i]: float(predictions[0][i]) for i in range(len(current_class_names)) 
                            if predictions[0][i] > 0.01}  # Only return significant confidences
+    }
+    
+    # Add bounding box info if detection model
+    if bbox:
+        response_data['bbox'] = bbox
+    
+    return jsonify(response_data)
+
+# New routes for model management
+
+@app.route('/models')
+def model_dashboard():
+    """Dashboard to view and switch between available models"""
+    return render_template('models.html', 
+                          available_models=AVAILABLE_MODELS,
+                          current_model=current_model_key)
+
+@app.route('/switch_model', methods=['POST'])
+def switch_model():
+    """Switch to a different model"""
+    new_model_key = request.form.get('model_key')
+    
+    if not new_model_key or new_model_key not in AVAILABLE_MODELS:
+        return jsonify({'error': 'Invalid model selection'})
+    
+    try:
+        # Load the new model
+        load_selected_model(new_model_key)
+        
+        # Update legacy variables for backward compatibility
+        global model, class_indices, class_names, simplified_classes, indexed_simple_classes, IMG_SIZE
+        model = current_model
+        class_indices = current_class_indices
+        class_names = current_class_names
+        simplified_classes = current_simplified_classes
+        indexed_simple_classes = current_indexed_simple_classes
+        IMG_SIZE = current_img_size
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Successfully switched to {AVAILABLE_MODELS[new_model_key]["name"]}',
+            'model_name': AVAILABLE_MODELS[new_model_key]["name"],
+            'model_key': new_model_key
+        })
+    except Exception as e:
+        return jsonify({'error': f'Failed to load model: {str(e)}'})
+
+@app.route('/model_info')
+def model_info():
+    """Get current model information"""
+    return jsonify({
+        'current_model': current_model_key,
+        'model_name': AVAILABLE_MODELS[current_model_key]['name'],
+        'description': AVAILABLE_MODELS[current_model_key]['description'],
+        'img_size': current_img_size,
+        'available_models': {k: {'name': v['name'], 'description': v['description']} 
+                           for k, v in AVAILABLE_MODELS.items()}
     })
 
 # New routes for enhanced features
 
 @app.route('/history')
 def view_history():
-    return render_template('history.html', history=prediction_history)
+    return render_template('history.html', 
+                          history=prediction_history,
+                          current_model=AVAILABLE_MODELS[current_model_key]['name'])
 
 @app.route('/analysis/<int:prediction_id>')
 def analysis(prediction_id):
@@ -314,40 +461,77 @@ def analysis(prediction_id):
             break
     
     if not prediction_entry:
+        print(f"Error: Prediction ID {prediction_id} not found in history")
         return redirect(url_for('home'))
     
     file_path = prediction_entry['file_path']
+    print(f"Analysis for ID {prediction_id}: Found prediction entry for {prediction_entry['filename']}")
     
     try:
         # Load and preprocess the image using safe_load_image
-        img_array, _ = safe_load_image(file_path, target_size=(IMG_SIZE, IMG_SIZE))
-
-        # Get all class probabilities
-        predictions = model.predict(img_array)
+        img_array, _ = safe_load_image(file_path, target_size=(current_img_size, current_img_size))
         
-        # Get all predictions sorted by confidence
-        all_predictions = []
-        for i, prob in enumerate(predictions[0]):
-            if prob > 0.001:  # Only include non-zero probabilities
-                class_name = list(class_indices.keys())[list(class_indices.values()).index(i)]
-                simplified = simplified_classes[class_name]
-                all_predictions.append({
-                    'index': i,
-                    'class_name': class_name,
-                    'simple_class': simplified,
-                    'confidence': float(prob),
-                    'confidence_percent': f"{prob:.2%}"
-                })
+        # Get model type from prediction entry
+        model_type = prediction_entry.get('model_type', 'classification')
         
-        # Sort by confidence (highest first)
-        all_predictions.sort(key=lambda x: x['confidence'], reverse=True)
-        
-        # Get top 5 predictions
-        top_predictions = all_predictions[:5]
+        # Handle different model types for prediction
+        if model_type == 'detection':
+            # For detection models, we need to handle different prediction structure
+            predictions = current_model.predict(img_array)
+            
+            # Extract classification probabilities (first part of output)
+            classification_probs = predictions[0] if isinstance(predictions, list) else predictions
+            
+            # Get all predictions sorted by confidence
+            all_predictions = []
+            for i, prob in enumerate(classification_probs[0]):
+                if prob > 0.001:  # Only include non-zero probabilities
+                    class_name = list(current_class_indices.keys())[list(current_class_indices.values()).index(i)]
+                    simplified = current_simplified_classes[class_name]
+                    all_predictions.append({
+                        'index': i,
+                        'class_name': class_name,
+                        'simple_class': simplified,
+                        'confidence': float(prob),
+                        'confidence_percent': f"{prob:.2%}"
+                    })
+            
+            # Sort by confidence (highest first)
+            all_predictions.sort(key=lambda x: x['confidence'], reverse=True)
+            
+            # Get top 5 predictions
+            top_predictions = all_predictions[:5]
+        else:
+            # Standard classification model
+            predictions = current_model.predict(img_array)
+            
+            # Get all predictions sorted by confidence
+            all_predictions = []
+            for i, prob in enumerate(predictions[0]):
+                if prob > 0.001:  # Only include non-zero probabilities
+                    class_name = list(current_class_indices.keys())[list(current_class_indices.values()).index(i)]
+                    simplified = current_simplified_classes[class_name]
+                    all_predictions.append({
+                        'index': i,
+                        'class_name': class_name,
+                        'simple_class': simplified,
+                        'confidence': float(prob),
+                        'confidence_percent': f"{prob:.2%}"
+                    })
+            
+            # Sort by confidence (highest first)
+            all_predictions.sort(key=lambda x: x['confidence'], reverse=True)
+            
+            # Get top 5 predictions
+            top_predictions = all_predictions[:5]
         
         # Format the image path correctly for URL access
         image_filename = os.path.basename(file_path)
         image_url = f"/uploads/{image_filename}"
+        
+        # If it's a detection model with bbox, use the bbox image instead
+        if model_type == 'detection' and prediction_entry.get('bbox'):
+            image_url = f"/draw_bbox/{prediction_id}"
         
         return render_template('analysis.html', 
                               prediction=prediction_entry,
@@ -355,7 +539,9 @@ def analysis(prediction_id):
                               all_predictions=all_predictions,
                               image_path=image_url)
     except Exception as e:
-        print(f"Error in analysis: {e}")
+        print(f"Error in analysis: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return redirect(url_for('home'))
 
 @app.route('/batch', methods=['GET', 'POST'])
@@ -626,5 +812,96 @@ def serve_requirements():
         headers={"Content-disposition": "attachment; filename=requirements.txt"}
     )
 
-if __name__ == '__main__':
-    app.run(debug=True)
+def predict_with_model(img_array, model_type='classification'):
+    """Make prediction with current model, handling both classification and detection"""
+    predictions = current_model.predict(img_array)
+    
+    if model_type == 'detection':
+        # Object detection model outputs: [classification_probs, bbox_coords]
+        # predictions[0] = classification probabilities
+        # predictions[1] = bounding box coordinates [x, y, width, height]
+        classification_probs = predictions[0] if isinstance(predictions, list) else predictions
+        bbox_coords = predictions[1] if isinstance(predictions, list) and len(predictions) > 1 else None
+        
+        predicted_idx = np.argmax(classification_probs[0])
+        predicted_class = current_class_names[predicted_idx]
+        confidence = float(np.max(classification_probs[0]))
+        
+        # Get bounding box if available
+        bbox = None
+        if bbox_coords is not None:
+            bbox = {
+                'x': float(bbox_coords[0][0]),
+                'y': float(bbox_coords[0][1]), 
+                'width': float(bbox_coords[0][2]),
+                'height': float(bbox_coords[0][3])
+            }
+        
+        return predicted_idx, predicted_class, confidence, classification_probs, bbox
+    else:
+        # Standard classification model
+        predicted_idx = np.argmax(predictions[0])
+        predicted_class = current_class_names[predicted_idx]
+        confidence = float(np.max(predictions[0]))
+        
+        return predicted_idx, predicted_class, confidence, predictions, None
+
+@app.route('/draw_bbox/<int:prediction_id>')
+def draw_bbox_image(prediction_id):
+    """Generate an image with bounding box drawn on it"""
+    # Find the prediction in history
+    prediction_entry = None
+    for entry in prediction_history:
+        if entry['id'] == prediction_id:
+            prediction_entry = entry
+            break
+    
+    if not prediction_entry or not prediction_entry.get('bbox'):
+        # If no bbox data, just serve the original image
+        return redirect(url_for('serve_upload', filename=os.path.basename(prediction_entry['file_path'])))
+    
+    try:
+        # Open the original image
+        file_path = prediction_entry['file_path']
+        image = Image.open(file_path)
+        draw = ImageDraw.Draw(image)
+        
+        # Get bounding box
+        bbox = prediction_entry['bbox']
+        img_width, img_height = image.size
+        
+        # Convert normalized coordinates to pixel coordinates
+        x = bbox['x'] * img_width
+        y = bbox['y'] * img_height
+        width = bbox['width'] * img_width
+        height = bbox['height'] * img_height
+        
+        # Draw the bounding box with a 3px red line
+        draw.rectangle([(x, y), (x + width, y + height)], outline='red', width=3)
+        
+        # Draw fruit label
+        font_size = int(img_height / 25)  # Proportional font size
+        try:
+            # Try to load a font, fallback to default if not available
+            font = ImageFont.truetype("arial.ttf", font_size)
+        except:
+            font = ImageFont.load_default()
+        
+        label = prediction_entry['prediction'].upper() + f" ({prediction_entry['confidence']:.1%})"
+        text_width, text_height = draw.textsize(label, font=font) if hasattr(draw, 'textsize') else (font_size * len(label) * 0.6, font_size * 1.2)
+        
+        # Draw background for text
+        draw.rectangle([(x, y - text_height - 4), (x + text_width + 4, y)], fill='red')
+        # Draw text
+        draw.text((x + 2, y - text_height - 2), label, fill='white', font=font)
+        
+        # Serve the image
+        img_io = BytesIO()
+        image.save(img_io, format='JPEG', quality=95)
+        img_io.seek(0)
+        return send_file(img_io, mimetype='image/jpeg')
+        
+    except Exception as e:
+        print(f"Error generating bbox image: {str(e)}")
+        # If something goes wrong, just serve the original image
+        return redirect(url_for('serve_upload', filename=os.path.basename(prediction_entry['file_path'])))

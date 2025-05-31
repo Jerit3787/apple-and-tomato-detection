@@ -161,6 +161,20 @@
         .range-slider {
             width: 100%;
         }
+
+        .image-container {
+            position: relative;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .bbox-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            border-radius: 10px;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
@@ -171,6 +185,7 @@
 
         <div class="feature-buttons">
             <a href="/" class="btn btn-outline-success"><i class="fas fa-home"></i> Home</a>
+            <a href="/models" class="btn btn-outline-primary"><i class="fas fa-brain"></i> Models</a>
             <a href="/history" class="btn btn-outline-info"><i class="fas fa-history"></i> History</a>
             <a href="/camera" class="btn btn-outline-primary"><i class="fas fa-camera"></i> Camera Detection</a>
             <a href="/batch" class="btn btn-outline-warning"><i class="fas fa-images"></i> Batch Process</a>
@@ -178,6 +193,13 @@
             <a href="/stats" class="btn btn-outline-dark"><i class="fas fa-chart-pie"></i> Statistics</a>
             <a href="/export/csv" class="btn btn-outline-danger"><i class="fas fa-file-export"></i> Export CSV</a>
         </div>
+
+        {% if current_model %}
+        <div class="alert alert-info text-center" role="alert">
+            <i class="fas fa-brain"></i> Currently using: <strong>{{ current_model }}</strong> 
+            <a href="/models" class="btn btn-sm btn-outline-primary ml-2">Switch Model</a>
+        </div>
+        {% endif %}
 
         <div class="drop-area" id="dropArea">
             <i class="fas fa-cloud-upload-alt"></i>
@@ -207,7 +229,12 @@
             </div>
         </div>
 
-        <img id="uploadedImage" class="hidden" alt="Uploaded Image" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+        <div class="image-container position-relative">
+            <img id="uploadedImage" class="hidden" alt="Uploaded Image" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+            {% if model_type == 'detection' and bbox and image_path %}
+            <canvas id="bboxCanvas" class="bbox-canvas"></canvas>
+            {% endif %}
+        </div>
 
         <form action="/predict" method="post" enctype="multipart/form-data" id="uploadForm" class="text-center">
             <input type="file" name="file" accept="image/*" required id="fileInput" class="hidden">
@@ -228,12 +255,27 @@
             <div class="confidence-meter">
                 <div class="confidence-level" style="width: {{ confidence }}"></div>
             </div>
-            {% endif %} {% if original_class %}
+            {% endif %} 
+            
+            {% if model_type == 'detection' and bbox %}
+            <div class="detection-info mt-3">
+                <h5><i class="fas fa-crosshairs"></i> Object Detection Results</h5>
+                <p class="text-muted">Bounding box coordinates:</p>
+                <div class="bbox-info">
+                    <small>
+                        X: {{ "%.2f"|format(bbox.x) }}, Y: {{ "%.2f"|format(bbox.y) }}<br>
+                        Width: {{ "%.2f"|format(bbox.width) }}, Height: {{ "%.2f"|format(bbox.height) }}
+                    </small>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if original_class %}
             <p class="original-class text-muted">Specific variety: {{ original_class }}</p>
             {% endif %} {% if image_path %}
             <div class="mt-3">
-                <a href="/analysis/{{ number }}" class="btn btn-info btn-sm">View Detailed Analysis</a>
-                <button type="button" class="btn btn-secondary btn-sm" data-toggle="modal" data-target="#feedbackModal">
+                <a href="/analysis/{{ prediction_id }}" class="btn btn-info btn-sm">View Detailed Analysis</a>
+                <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#feedbackModal">
                     Provide Feedback
                 </button>
             </div>
@@ -333,6 +375,10 @@
         const enhancementFactorHidden = document.getElementById('enhancementFactorHidden');
         const enhancementType = document.getElementById('enhancementType');
         const applyEnhancement = document.getElementById('applyEnhancement');
+        
+        // Only access bboxCanvas if it exists
+        const bboxCanvas = document.getElementById('bboxCanvas');
+        const ctx = bboxCanvas ? bboxCanvas.getContext('2d') : null;
 
         // Handle browse button click
         browseBtn.addEventListener('click', function() {
@@ -448,6 +494,38 @@
             }
         }
 
+        // Draw bounding box on canvas
+        function drawBoundingBox(bbox) {
+            const img = uploadedImage;
+            const canvas = document.getElementById('bboxCanvas');
+            
+            // Only proceed if canvas exists
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+
+            // Set canvas size
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            // Clear previous drawings
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw the bounding box
+            ctx.beginPath();
+            ctx.rect(bbox.x, bbox.y, bbox.width, bbox.height);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'red';
+            ctx.stroke();
+        }
+
+        // Watch for changes in the uploaded image and draw bounding box if needed
+        uploadedImage.addEventListener('load', function() {
+            {% if model_type == 'detection' and bbox %}
+            drawBoundingBox({{ bbox|tojson }});
+            {% endif %}
+        });
+
         // Handle feedback submission
         document.getElementById('submitFeedback').addEventListener('click', function() {
             const form = document.getElementById('feedbackForm');
@@ -498,4 +576,3 @@
 </body>
 
 </html>
-`

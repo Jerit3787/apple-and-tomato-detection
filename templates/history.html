@@ -95,6 +95,11 @@
             border-radius: 10px;
             margin-top: 20px;
         }
+        
+        .detection-badge {
+            background-color: #ffc107;
+            color: black;
+        }
     </style>
 </head>
 
@@ -116,7 +121,7 @@
         <div class="history-container">
             {% for item in history %}
             <div class="history-item">
-                <img src="{{ item.file_path.replace('\\', '/') }}" class="history-image" alt="Prediction image">
+                <img src="{% if item.model_type == 'detection' and item.bbox %}/draw_bbox/{{ item.id }}{% else %}{{ item.file_path.replace('\\', '/') }}{% endif %}" class="history-image" alt="Prediction image">
                 <div class="history-details">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5>
@@ -125,6 +130,9 @@
                             <span class="badge tomato-label">Tomato</span> {% else %}
                             <span class="badge badge-secondary">{{ item.prediction }}</span> {% endif %}
                             <small class="text-muted ml-2">{{ item.original_class }}</small>
+                            {% if item.model_type == 'detection' %}
+                            <span class="badge badge-warning detection-badge"><i class="fas fa-crosshairs"></i> Detection</span>
+                            {% endif %}
                         </h5>
                         <span class="text-muted">{{ item.timestamp }}</span>
                     </div>

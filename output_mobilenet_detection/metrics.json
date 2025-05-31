@@ -1,0 +1,6 @@
+{
+  "classification_accuracy": 1.0,
+  "mean_iou": 0.7818092107772827,
+  "num_classes": 23,
+  "test_samples": 46
+}
